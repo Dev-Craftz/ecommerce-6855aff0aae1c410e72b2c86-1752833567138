@@ -1,0 +1,372 @@
+
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>hello</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+        </head>
+        <body>
+          <div class="min-h-screen" style="background:#F9FAFB;color:#1F2937;font-family:sans-serif;opacity:0"><header class="fixed top-0 w-full z-50" style="background:#4B0082;color:#1F2937"><div class="container mx-auto px-4 py-4 flex justify-between items-center"><h1 class="text-2xl font-bold">hello</h1><button class="lg:hidden" aria-label="Toggle menu"><i class="fas fa-bars text-xl"></i></button><nav class="lg:flex hidden absolute lg:static top-16 left-0 w-full lg:w-auto" style="background:#4B0082"><ul class="flex flex-col lg:flex-row space-y-4 lg:space-y-0 lg:space-x-6 p-4 lg:p-0"><li><button class="hover:underline">Home</button></li><li><button class="hover:underline">Products</button></li><li><button class="hover:underline">Contact</button></li><li><button class="hover:underline flex items-center" id="cart-btn">Cart (<span id="cart-count">0</span>)</button></li><li><button class="hover:underline" id="login-btn">Login</button></li><li><button class="hover:underline" id="signup-btn">Signup</button></li></ul></nav></div></header><main class="pt-20"><section id="home" class="flex flex-col items-center justify-center text-center" style="padding:4rem"><h2 class="text-4xl font-bold mb-4 custom-animation" style="opacity:0;transform:translateY(20px)">Welcome to hello</h2><p class="text-lg max-w-2xl">bio</p></section><section id="products" style="padding:4rem"><div class="container mx-auto px-4"><h2 class="text-3xl font-bold mb-8 text-center">Our Products</h2><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div></div></section><section id="contact" style="padding:4rem"><div class="container mx-auto px-4 text-center"><h2 class="text-3xl font-bold mb-8">Contact Us</h2><p class="text-lg">Email: <a href="mailto:dussauday469@gmail.com" class="underline">dussauday469@gmail.com</a></p><p class="text-lg mt-2">WhatsApp: <a href="https://wa.me/6304478845" class="underline">6304478845</a></p></div></section></main><footer class="py-6 text-center" style="background:#4B0082;color:#1F2937"><p>© 2025 hello. All rights reserved.</p></footer></div>
+          
+        <script>
+          window.ecommerceConfig = {
+            ecommerceId: ":ecommerceId",
+            apiBaseUrl: "http://localhost:5000"
+          };
+
+          document.addEventListener('DOMContentLoaded', () => {
+            const updateCartDisplay = () => {
+              const token = localStorage.getItem('token');
+              const cartCountEl = document.querySelector('#cart-count');
+              if (!cartCountEl) {
+                console.error('Cart count element not found');
+                return;
+              }
+              if (!token) {
+                cartCountEl.textContent = '0';
+                return;
+              }
+              fetch(`${window.ecommerceConfig.apiBaseUrl}/ecommerce/${window.ecommerceConfig.ecommerceId}/cart`, {
+                headers: { Authorization: `Bearer ${token}` },
+              })
+                .then(res => {
+                  if (!res.ok) {
+                    console.error('Failed to fetch cart:', res.status, res.statusText);
+                    throw new Error('Failed to fetch cart: ' + res.statusText);
+                  }
+                  return res.json();
+                })
+                .then(cart => {
+                  const cartCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+                  cartCountEl.textContent = cartCount;
+                })
+                .catch(err => console.error('Error fetching cart:', err));
+            };
+
+            const addToCartButtons = document.querySelectorAll('.add-to-cart');
+            addToCartButtons.forEach(button => {
+              button.addEventListener('click', () => {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                  const loginBtn = document.querySelector('#login-btn');
+                  if (loginBtn) loginBtn.click();
+                  return;
+                }
+                const productId = button.dataset.productId;
+                if (!productId) {
+                  console.error('Product ID missing on button');
+                  return;
+                }
+                const components = JSON.parse(localStorage.getItem('components') || '{}');
+                const product = components.products?.[productId];
+                if (!product) {
+                  console.error('Product not found for ID:', productId);
+                  return;
+                }
+                fetch(`${window.ecommerceConfig.apiBaseUrl}/ecommerce/${window.ecommerceConfig.ecommerceId}/cart`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    productId: parseInt(productId),
+                    quantity: 1,
+                    name: product.name,
+                    price: product.price,
+                  }),
+                })
+                  .then(res => {
+                    if (!res.ok) {
+                      console.error('Failed to add to cart:', res.status, res.statusText);
+                      throw new Error('Failed to add to cart: ' + res.statusText);
+                    }
+                    return res.json();
+                  })
+                  .then(data => {
+                    alert(data.message || 'Added to cart');
+                    updateCartDisplay();
+                  })
+                  .catch(err => alert('Error adding to cart: ' + err.message));
+              });
+            });
+
+            const removeFromCartButtons = document.querySelectorAll('.remove-from-cart');
+            removeFromCartButtons.forEach(button => {
+              button.addEventListener('click', () => {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                  const loginBtn = document.querySelector('#login-btn');
+                  if (loginBtn) loginBtn.click();
+                  return;
+                }
+                const productId = button.dataset.productId;
+                if (!productId) {
+                  console.error('Product ID missing on button');
+                  return;
+                }
+                fetch(`${window.ecommerceConfig.apiBaseUrl}/ecommerce/${window.ecommerceConfig.ecommerceId}/cart/remove`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ productId: parseInt(productId) }),
+                })
+                  .then(res => {
+                    if (!res.ok) {
+                      console.error('Failed to remove from cart:', res.status, res.statusText);
+                      throw new Error('Failed to remove from cart: ' + res.statusText);
+                    }
+                    return res.json();
+                  })
+                  .then(data => {
+                    alert(data.message || 'Removed from cart');
+                    updateCartDisplay();
+                    window.location.reload();
+                  })
+                  .catch(err => alert('Error removing from cart: ' + err.message));
+              });
+            });
+
+            const loginBtn = document.querySelector('#login-btn');
+            if (loginBtn) {
+              loginBtn.addEventListener('click', () => {
+                const loginForm = document.querySelector('#login-form');
+                if (loginForm) loginForm.style.display = 'block';
+                const signupForm = document.querySelector('#signup-form');
+                if (signupForm) signupForm.style.display = 'none';
+              });
+            }
+
+            const signupBtn = document.querySelector('#signup-btn');
+            if (signupBtn) {
+              signupBtn.addEventListener('click', () => {
+                const signupForm = document.querySelector('#signup-form');
+                if (signupForm) signupForm.style.display = 'block';
+                const loginForm = document.querySelector('#login-form');
+                if (loginForm) loginForm.style.display = 'none';
+              });
+            }
+
+            const loginForm = document.querySelector('#login-form');
+            if (loginForm) {
+              loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = e.target.querySelector('[name="email"]')?.value;
+                const password = e.target.querySelector('[name="password"]')?.value;
+                if (!email || !password) {
+                  alert('Please enter email and password');
+                  return;
+                }
+                fetch(`${window.ecommerceConfig.apiBaseUrl}/ecommerce/${window.ecommerceConfig.ecommerceId}/login`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email, password }),
+                })
+                  .then(res => {
+                    if (!res.ok) {
+                      console.error('Login failed:', res.status, res.statusText);
+                      throw new Error('Login failed: ' + res.statusText);
+                    }
+                    return res.json();
+                  })
+                  .then(data => {
+                    if (data.token) {
+                      localStorage.setItem('token', data.token);
+                      localStorage.setItem('components', JSON.stringify({"shopName":"hello","shopDescription":"bio","email":"dussauday469@gmail.com","whatsapp":"6304478845","products":[],"design":{"primaryColor":"#4B0082","secondaryColor":"#FF4500","backgroundColor":"#F9FAFB","textColor":"#1F2937","fontFamily":"sans-serif","borderRadius":"0.5rem","animationType":"float","sectionPadding":"4rem","cardShadow":"0 4px 6px -1px rgba(0, 0, 0, 0.1)","hoverEffect":"scale"},"logo":"/placeholder-logo.jpg"}));
+                      alert(data.message || 'Login successful');
+                      window.location.href = '/ecommerce-editor/templateEcommerce1';
+                    } else {
+                      alert(data.error || 'Login failed. Try admin@shop.com / admin123 for admin access.');
+                    }
+                  })
+                  .catch(err => alert('Error logging in: ' + err.message));
+              });
+            }
+
+            const signupForm = document.querySelector('#signup-form');
+            if (signupForm) {
+              signupForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = e.target.querySelector('[name="name"]')?.value;
+                const email = e.target.querySelector('[name="email"]')?.value;
+                const phoneNumber = e.target.querySelector('[name="phoneNumber"]')?.value;
+                const password = e.target.querySelector('[name="password"]')?.value;
+                if (!name || !email || !password) {
+                  alert('Please enter name, email, and password');
+                  return;
+                }
+                fetch(`${window.ecommerceConfig.apiBaseUrl}/ecommerce/${window.ecommerceConfig.ecommerceId}/signup`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name, email, phoneNumber, password }),
+                })
+                  .then(res => {
+                    if (!res.ok) {
+                      console.error('Signup failed:', res.status, res.statusText);
+                      throw new Error('Signup failed: ' + res.statusText);
+                    }
+                    return res.json();
+                  })
+                  .then(data => {
+                    if (data.token) {
+                      localStorage.setItem('token', data.token);
+                      localStorage.setItem('components', JSON.stringify({"shopName":"hello","shopDescription":"bio","email":"dussauday469@gmail.com","whatsapp":"6304478845","products":[],"design":{"primaryColor":"#4B0082","secondaryColor":"#FF4500","backgroundColor":"#F9FAFB","textColor":"#1F2937","fontFamily":"sans-serif","borderRadius":"0.5rem","animationType":"float","sectionPadding":"4rem","cardShadow":"0 4px 6px -1px rgba(0, 0, 0, 0.1)","hoverEffect":"scale"},"logo":"/placeholder-logo.jpg"}));
+                      alert(data.message || 'Signup successful');
+                      window.location.href = '/ecommerce-editor/templateEcommerce1';
+                    } else {
+                      alert(data.error || 'Signup failed.');
+                    }
+                  })
+                  .catch(err => alert('Error signing up: ' + err.message));
+              });
+            }
+
+            const logoutBtn = document.querySelector('#logout-btn');
+            if (logoutBtn) {
+              logoutBtn.addEventListener('click', () => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('components');
+                window.location.href = '/ecommerce-editor/templateEcommerce1';
+              });
+            }
+
+            const placeOrderBtn = document.querySelector('#place-order-btn');
+            if (placeOrderBtn) {
+              placeOrderBtn.addEventListener('click', () => {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                  const loginBtn = document.querySelector('#login-btn');
+                  if (loginBtn) loginBtn.click();
+                  return;
+                }
+                fetch(`${window.ecommerceConfig.apiBaseUrl}/ecommerce/${window.ecommerceConfig.ecommerceId}/order`, {
+                  method: 'POST',
+                  headers: { 'Authorization': `Bearer ${token}` },
+                })
+                  .then(res => {
+                    if (!res.ok) {
+                      console.error('Failed to place order:', res.status, res.statusText);
+                      throw new Error('Failed to place order: ' + res.statusText);
+                    }
+                    return res.json();
+                  })
+                  .then(data => {
+                    alert(data.message || 'Order placed');
+                    updateCartDisplay();
+                  })
+                  .catch(err => alert('Error placing order: ' + err.message));
+              });
+            }
+
+            const adminBtn = document.querySelector('#admin-btn');
+            if (adminBtn) {
+              adminBtn.addEventListener('click', () => {
+                const adminPanel = document.querySelector('#admin');
+                if (adminPanel) adminPanel.style.display = 'block';
+              });
+            }
+
+            const addProductForm = document.querySelector('#add-product-form');
+            if (addProductForm) {
+              addProductForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const token = localStorage.getItem('token');
+                if (!token) {
+                  alert('Please log in as admin.');
+                  return;
+                }
+                const name = e.target.querySelector('[name="name"]')?.value;
+                const description = e.target.querySelector('[name="description"]')?.value;
+                const price = parseFloat(e.target.querySelector('[name="price"]')?.value);
+                const image = e.target.querySelector('[name="image"]')?.value;
+                if (!name || !description || !price || !image) {
+                  alert('All product fields are required');
+                  return;
+                }
+                fetch(`${window.ecommerceConfig.apiBaseUrl}/ecommerce/${window.ecommerceConfig.ecommerceId}/add-product`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ name, description, price, image, htmlContent: document.documentElement.outerHTML }),
+                })
+                  .then(res => {
+                    if (!res.ok) {
+                      console.error('Failed to add product:', res.status, res.statusText);
+                      throw new Error('Failed to add product: ' + res.statusText);
+                    }
+                    return res.json();
+                  })
+                  .then(data => {
+                    alert(data.message || 'Product added');
+                    e.target.reset();
+                    window.location.href = '/ecommerce-editor/templateEcommerce1';
+                  })
+                  .catch(err => alert('Error adding product: ' + err.message));
+              });
+            }
+
+            const loginCancel = document.querySelector('#login-form .cancel-btn');
+            if (loginCancel) {
+              loginCancel.addEventListener('click', () => {
+                const loginForm = document.querySelector('#login-form');
+                if (loginForm) loginForm.style.display = 'none';
+              });
+            }
+
+            const signupCancel = document.querySelector('#signup-form .cancel-btn');
+            if (signupCancel) {
+              signupCancel.addEventListener('click', () => {
+                const signupForm = document.querySelector('#signup-form');
+                if (signupForm) signupForm.style.display = 'none';
+              });
+            }
+
+            updateCartDisplay();
+          });
+        </script>
+        <style>
+          :root {
+            --primary: #4B0082;
+            --secondary: #FF4500;
+            --bg: #F9FAFB;
+            --text: #1F2937;
+            --font: sans-serif;
+            --rounded: 0.5rem;
+            --section-padding: 4rem;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+          }
+          @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+          }
+          .custom-animation {
+            animation: float 3s ease-in-out infinite;
+          }
+          .hover-effect {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+          }
+          .hover-effect:hover {
+            transform: scale(1.03);
+            
+            
+          }
+          img.logo { max-width: 150px; max-height: 150px; object-fit: contain; }
+          img.product-img { max-width: 300px; max-height: 200px; object-fit: cover; }
+          body { background: linear-gradient(to bottom right, #f9fafb, #e5e7eb); }
+          @media (prefers-color-scheme: dark) {
+            body { background: linear-gradient(to bottom right, #1f2937, #374151); }
+          }
+          #login-form, #signup-form, #admin, #cart-details { display: none; }
+        </style>
+      
+        </body>
+        </html>
+      
